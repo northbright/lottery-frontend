@@ -12,7 +12,7 @@
         />
 
         <q-toolbar-title>
-          Quasar App
+          Lottery
         </q-toolbar-title>
 
         <div>Quasar v{{ $q.version }}</div>
@@ -27,6 +27,15 @@
     >
       <q-list>
         <q-item-label header>Essential Links</q-item-label>
+        <q-item v-for="(prize, index) in prizes" :key="index">
+          <q-item-section avatar>
+            <q-icon name="school" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>{{ prize.name }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
         <q-item clickable tag="a" target="_blank" href="https://quasar.dev">
           <q-item-section avatar>
             <q-icon name="school" />
@@ -121,8 +130,39 @@ export default {
 
   data() {
     return {
-      leftDrawerOpen: false
+      leftDrawerOpen: false,
+      prizes: [],
+      url: "ws://192.168.1.7:8081/ws",
+      conn: {}
     };
+  },
+
+  created() {
+    console.log("created()");
+    this.initWebSocket();
+  },
+
+  methods: {
+    initWebSocket() {
+      console.log("initWebSocket()");
+      this.conn = new WebSocket(this.url);
+      this.conn.onopen = this.webSocketOnOpen;
+      this.conn.onmessage = this.webSocketOnMessage;
+    },
+
+    webSocketOnOpen() {
+      console.log("WebSocket on open");
+      var action = { name: "get_prizes" };
+      this.conn.send(JSON.stringify(action));
+    },
+
+    webSocketOnMessage(msg) {
+      var res = JSON.parse(msg.data);
+      console.log(res);
+      if (res.success === true) {
+        this.prizes = res.prizes;
+      }
+    }
   }
 };
 </script>
