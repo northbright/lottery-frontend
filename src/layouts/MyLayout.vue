@@ -74,6 +74,8 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
   name: "MyLayout",
 
@@ -86,7 +88,7 @@ export default {
       prizesDone: [],
       winners: [],
       oldWinnerIndexes: [],
-      url: "ws://localhost:8080/ws",
+      url: "",
       conn: {},
       started: false,
       fontSize: "35px"
@@ -95,7 +97,8 @@ export default {
 
   created() {
     console.log("created()");
-    this.initWebSocket();
+    //this.initWebSocket();
+    this.loadData();
   },
 
   mounted() {
@@ -110,9 +113,29 @@ export default {
   },
 
   methods: {
-    initWebSocket() {
+    loadData() {
+      axios
+        .get("/get-ws-url")
+        .then(response => {
+          this.url = response.data;
+          console.log(response);
+
+          console.log(this.url);
+          this.initWebSocket(this.url);
+        })
+        .catch(() => {
+          this.$q.notify({
+            color: "negative",
+            position: "top",
+            message: "Loading failed",
+            icon: "report_problem"
+          });
+        });
+    },
+
+    initWebSocket(url) {
       console.log("initWebSocket()");
-      this.conn = new WebSocket(this.url);
+      this.conn = new WebSocket(url);
       this.conn.onopen = this.webSocketOnOpen;
       this.conn.onmessage = this.webSocketOnMessage;
     },
@@ -139,25 +162,11 @@ export default {
               this.winners = [];
               var prizeNum = this.prizes[this.prizeIndex].num;
 
-              for (var i = 0; i < this.prizes[this.prizeIndex].num; i++) {
+              for (var i = 0; i < prizeNum; i++) {
                 this.winners[i] = { id: "", name: "?" };
               }
             } else {
               this.winners = res.winners;
-            }
-
-            if (prizeNum >= 50) {
-              this.fontSize = "35px";
-            } else if (prizeNum >= 20) {
-              this.fontSize = "50px";
-            } else if (prizeNum >= 10) {
-              this.fontSize = "60px";
-            } else if (prizeNum >= 5) {
-              this.fontSize = "70px";
-            } else if (prizeNum >= 2) {
-              this.fontSize = "80px";
-            } else {
-              this.fontSize = "90px";
             }
 
             break;
@@ -184,6 +193,20 @@ export default {
       var action = { name: "get_winners", prize_index: index };
       this.conn.send(JSON.stringify(action));
       this.oldWinnerIndexes = [];
+
+      var prizeNum = this.prizes[index].num;
+
+      if (prizeNum >= 20) {
+        this.fontSize = "50px";
+      } else if (prizeNum >= 10) {
+        this.fontSize = "60px";
+      } else if (prizeNum >= 5) {
+        this.fontSize = "70px";
+      } else if (prizeNum >= 2) {
+        this.fontSize = "80px";
+      } else {
+        this.fontSize = "90px";
+      }
     },
 
     isCurrentWinnerSelected(index) {
