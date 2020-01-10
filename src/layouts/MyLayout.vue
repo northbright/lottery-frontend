@@ -11,9 +11,7 @@
           aria-label="Menu"
         />
 
-        <q-toolbar-title>
-          Lottery
-        </q-toolbar-title>
+        <q-toolbar-title> Lottery {{ currentPrizeContent }} </q-toolbar-title>
 
         <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
@@ -40,12 +38,13 @@
       content-class="bg-grey-2"
     >
       <q-list>
-        <q-item-label header>Essential Links</q-item-label>
+        <q-item-label header>奖项</q-item-label>
         <q-item
           v-for="(prize, index) in prizes"
           :key="index"
           clickable
           @click="selectPrize(index)"
+          :class="getPrizeItemClass(index)"
         >
           <q-item-section avatar>
             <q-icon name="school" />
@@ -62,12 +61,12 @@
         class="q-gutter-xl fit row wrap justify-around content-center bg-pink-1"
       >
         <q-btn
-          color="deep-orange"
           v-for="(winner, index) in this.winners"
           :label="winner.name"
           :key="index"
           :size="fontSize"
           @click="selectWinner(index)"
+          :color="getButtonColor(index)"
         ></q-btn>
       </div>
     </q-page-container>
@@ -81,8 +80,10 @@ export default {
   data() {
     return {
       leftDrawerOpen: false,
+      currentPrizeContent: "",
       prizes: [],
       prizeIndex: 0,
+      prizesDone: [],
       winners: [],
       oldWinnerIndexes: [],
       url: "ws://192.168.1.40:8081/ws",
@@ -146,17 +147,17 @@ export default {
             }
 
             if (prizeNum >= 50) {
-              this.fontSize = "50px";
+              this.fontSize = "35px";
             } else if (prizeNum >= 20) {
-              this.fontSize = "80px";
+              this.fontSize = "50px";
             } else if (prizeNum >= 10) {
-              this.fontSize = "90px";
+              this.fontSize = "60px";
             } else if (prizeNum >= 5) {
-              this.fontSize = "100px";
+              this.fontSize = "70px";
             } else if (prizeNum >= 2) {
-              this.fontSize = "110px";
+              this.fontSize = "80px";
             } else {
-              this.fontSize = "120px";
+              this.fontSize = "90px";
             }
 
             break;
@@ -169,6 +170,7 @@ export default {
           case "stop":
             this.started = false;
             this.winners = res.winners;
+            this.prizesDone[res.action.prize_index] = true;
             break;
         }
       }
@@ -176,22 +178,56 @@ export default {
 
     selectPrize(index) {
       this.prizeIndex = index;
+      this.currentPrizeContent = this.prizes[this.prizeIndex].content;
+
       console.log("prize: " + index + "selected");
       var action = { name: "get_winners", prize_index: index };
       this.conn.send(JSON.stringify(action));
+      this.oldWinnerIndexes = [];
     },
 
-    /*
-    selectWinner(index) {
+    isCurrentWinnerSelected(index) {
       var idx = this.oldWinnerIndexes.indexOf(index);
+      return idx === -1 ? false : true;
+    },
 
-      if (idx != -1) {
-        delete this.oldWinnerIndexes[id];
+    selectWinner(index) {
+      console.log(this.oldWinnerIndexes);
+      if (this.isCurrentWinnerSelected(index)) {
+        var idx = this.oldWinnerIndexes.indexOf(index);
+        console.log("idx: " + idx);
+
+        console.log("selected: before remove:");
+        console.log(this.oldWinnerIndexes);
+
+        //delete this.oldWinnerIndexes[idx];
+        this.oldWinnerIndexes.splice(idx, 1);
+
+        console.log("selected: after remove:");
+        console.log(this.oldWinnerIndexes);
       } else {
+        console.log("not selected: before push");
+        console.log(this.oldWinnerIndexes);
+
         this.oldWinnerIndexes.push(index);
+
+        console.log("not selected: after push");
+        console.log(this.oldWinnerIndexes);
       }
     },
-*/
+
+    getButtonColor(index) {
+      return this.isCurrentWinnerSelected(index) ? "purple" : "red";
+    },
+
+    getPrizeItemClass(index) {
+      if (index == this.prizeIndex) {
+        return "bg-red";
+      } else {
+        return this.prizesDone[index] ? "bg-pink-2" : "bg-gray";
+      }
+    },
+
     startStop() {
       var action = {};
 
@@ -204,6 +240,7 @@ export default {
       this.started = !this.started;
 
       action.prize_index = this.prizeIndex;
+      action.old_winner_indexes = this.oldWinnerIndexes;
       console.log(action);
       this.conn.send(JSON.stringify(action));
     }
