@@ -86,7 +86,7 @@ export default {
       prizesDone: [],
       winners: [],
       oldWinnerIndexes: [],
-      url: "ws://192.168.1.40:8081/ws",
+      url: "ws://localhost:8080/ws",
       conn: {},
       started: false,
       fontSize: "35px"
