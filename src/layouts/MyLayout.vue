@@ -1,7 +1,7 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="lHh Lpr lff">
     <q-header elevated>
-      <q-toolbar>
+      <q-toolbar class="bg-pink-3 text-black">
         <q-btn
           flat
           dense
@@ -20,7 +20,17 @@
     </q-header>
 
     <q-footer bordered class="bg-white text-primary">
-      <q-btn label="start/stop" @click="startStop()" />
+      <div class="q-pa-md q-gutter-xl fit row wrap justify-around">
+        <q-btn
+          rounded
+          color="pink-3"
+          text-color="black"
+          type="submit"
+          size="20px"
+          label="start/stop"
+          @click="startStop()"
+        />
+      </div>
     </q-footer>
 
     <q-drawer
@@ -47,15 +57,20 @@
       </q-list>
     </q-drawer>
 
-    <q-page-container> </q-page-container>
-    <div class="q-gutter-md">
-      <q-btn
-        color="deep-orange"
-        v-for="(winner, index) in this.winners"
-        :label="winner.name"
-        :key="index"
-      ></q-btn>
-    </div>
+    <q-page-container>
+      <div
+        class="q-gutter-xl fit row wrap justify-around content-center bg-pink-1"
+      >
+        <q-btn
+          color="deep-orange"
+          v-for="(winner, index) in this.winners"
+          :label="winner.name"
+          :key="index"
+          :size="fontSize"
+          @click="selectWinner(index)"
+        ></q-btn>
+      </div>
+    </q-page-container>
   </q-layout>
 </template>
 
@@ -69,15 +84,28 @@ export default {
       prizes: [],
       prizeIndex: 0,
       winners: [],
-      url: "ws://192.168.1.7:8081/ws",
+      oldWinnerIndexes: [],
+      url: "ws://192.168.1.40:8081/ws",
       conn: {},
-      started: false
+      started: false,
+      fontSize: "35px"
     };
   },
 
   created() {
     console.log("created()");
     this.initWebSocket();
+  },
+
+  mounted() {
+    var _this = this;
+    document.onkeydown = function(e) {
+      let key = e.keyCode;
+      if (key == 13) {
+        window.event.preventDefault();
+        _this.startStop();
+      }
+    };
   },
 
   methods: {
@@ -98,11 +126,50 @@ export default {
       var res = JSON.parse(msg.data);
       console.log(res);
       if (res.success === true) {
-        this.prizes = res.prizes;
-        if (res.action.name === "start") {
-          this.started = true;
-        } else if (res.action.name === "stop") {
-          this.started = false;
+        var action = res.action;
+
+        switch (action.name) {
+          case "get_prizes":
+            this.prizes = res.prizes;
+            break;
+
+          case "get_winners":
+            if (res.winners.length === 0) {
+              this.winners = [];
+              var prizeNum = this.prizes[this.prizeIndex].num;
+
+              for (var i = 0; i < this.prizes[this.prizeIndex].num; i++) {
+                this.winners[i] = { id: "", name: "?" };
+              }
+            } else {
+              this.winners = res.winners;
+            }
+
+            if (prizeNum >= 50) {
+              this.fontSize = "50px";
+            } else if (prizeNum >= 20) {
+              this.fontSize = "80px";
+            } else if (prizeNum >= 10) {
+              this.fontSize = "90px";
+            } else if (prizeNum >= 5) {
+              this.fontSize = "100px";
+            } else if (prizeNum >= 2) {
+              this.fontSize = "110px";
+            } else {
+              this.fontSize = "120px";
+            }
+
+            break;
+
+          case "start":
+            this.started = true;
+            this.winners = res.winners;
+            break;
+
+          case "stop":
+            this.started = false;
+            this.winners = res.winners;
+            break;
         }
       }
     },
@@ -110,15 +177,32 @@ export default {
     selectPrize(index) {
       this.prizeIndex = index;
       console.log("prize: " + index + "selected");
+      var action = { name: "get_winners", prize_index: index };
+      this.conn.send(JSON.stringify(action));
     },
 
+    /*
+    selectWinner(index) {
+      var idx = this.oldWinnerIndexes.indexOf(index);
+
+      if (idx != -1) {
+        delete this.oldWinnerIndexes[id];
+      } else {
+        this.oldWinnerIndexes.push(index);
+      }
+    },
+*/
     startStop() {
       var action = {};
+
       if (!this.started) {
         action.name = "start";
       } else {
         action.name = "stop";
       }
+
+      this.started = !this.started;
+
       action.prize_index = this.prizeIndex;
       console.log(action);
       this.conn.send(JSON.stringify(action));
