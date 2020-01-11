@@ -11,7 +11,7 @@
           aria-label="Menu"
         />
 
-        <q-toolbar-title> Lottery {{ currentPrizeContent }} </q-toolbar-title>
+        <q-toolbar-title>{{ currentPrizeContent }} </q-toolbar-title>
 
         <div>Quasar v{{ $q.version }}</div>
       </q-toolbar>
@@ -187,7 +187,10 @@ export default {
 
     selectPrize(index) {
       this.prizeIndex = index;
-      this.currentPrizeContent = this.prizes[this.prizeIndex].content;
+      this.currentPrizeContent =
+        this.prizes[this.prizeIndex].name +
+        " -- " +
+        this.prizes[this.prizeIndex].content;
 
       console.log("prize: " + index + "selected");
       var action = { name: "get_winners", prize_index: index };
@@ -197,15 +200,15 @@ export default {
       var prizeNum = this.prizes[index].num;
 
       if (prizeNum >= 20) {
-        this.fontSize = "50px";
+        this.fontSize = "35px";
       } else if (prizeNum >= 10) {
-        this.fontSize = "60px";
+        this.fontSize = "50px";
       } else if (prizeNum >= 5) {
-        this.fontSize = "70px";
+        this.fontSize = "60px";
       } else if (prizeNum >= 2) {
-        this.fontSize = "80px";
+        this.fontSize = "70px";
       } else {
-        this.fontSize = "90px";
+        this.fontSize = "80px";
       }
     },
 
